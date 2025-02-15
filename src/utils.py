@@ -138,14 +138,13 @@ def prepare_llm_judge_queries(
 def inspect_llm_judge_queries(
     dataset_df: pd.DataFrame,
     template_path="assets/judge_template.json",
-    answer_key="mixtral_response",
+    answer_key="phi4_response",
     reference_key="gpt4_response",
 ):
     """Inspect one prompt from the prepared LLM judge queries"""
     with open(template_path) as f:
         judge_template = json.load(f)
-
-    example_row = dataset_df.iloc[4]
+    example_row = dataset_df.iloc[0]
     prompt = format_judge_prompt(
         judge_template,
         example_row["prompt"],
@@ -156,14 +155,14 @@ def inspect_llm_judge_queries(
 
 
 def parse_judge_responses(
-    judge_responses: Dict[int, str]
+    judge_responses: Dict[int, str],
 ) -> Tuple[Dict[int, int], Dict[int, str]]:
     """
     Parses the llm-judge responses and extracts the labels and explanations.
     """
     labels, explanations = {}, {}
     for pidx, response in judge_responses.items():
-        match = re.search(r"\[\[([\d\.]+)\]\]\n(.+)", response)
+        match = re.search(r"\[\[([\d\.]+)\]\]\s*\n\s*(.+)", response)
         if match:
             score, explanation = int(float(match.group(1))), match.group(2)
         else:
@@ -258,3 +257,11 @@ def update_yaml_with_env_vars(file_path, env_vars):
 
     with open(file_path, "w") as file:
         yaml.dump(yaml_content, file)
+
+
+def save_intermediate_dataset(dataset_df, filename):
+    """Save the current state of the DataFrame to a JSON file."""
+    # Reset index to ensure uniqueness
+    dataset_df.reset_index(drop=True, inplace=True)
+    dataset_df.to_json(filename, orient="records", indent=4, force_ascii=False)
+    print(f"Intermediate state saved to {filename}")
